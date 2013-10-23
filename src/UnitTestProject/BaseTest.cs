@@ -18,7 +18,8 @@ namespace UnitTestProject
 
         protected List<string> Sites = new List<string>()
             {
-                "http://kpi.ua/"
+                "http://kpi.ua/",
+                "http://cad.edu.kpi.ua/tsoorin/"
             };
 
         protected List<string> WebAttributes = new List<string>()
@@ -118,21 +119,21 @@ namespace UnitTestProject
             }
         }
 
-        protected void GetAttributes()
+        protected void GetAttributes(string head = "META", string name = "NAME", string content = "CONTENT")
         {
             Attributes.Clear();
 
-            var elems = Web.Document.GetElementsByTagName("META");
+            var elems = Web.Document.GetElementsByTagName(head);
             try
             {
                 if (elems != null)
                 {
                     foreach (HtmlElement elem in elems)
                     {
-                        String nameStr = elem.GetAttribute("NAME");
+                        String nameStr = elem.GetAttribute(name);
                         if (nameStr != null && nameStr.Length != 0)
                         {
-                            String contentStr = elem.GetAttribute("CONTENT");
+                            String contentStr = elem.GetAttribute(content);
                             Attributes.Add(new Tuple<string, string>(nameStr, contentStr));
                         }
                     }
@@ -194,7 +195,7 @@ namespace UnitTestProject
             return flag;
         }
 
-        protected void GetAllAttributesFromSite()
+        protected void GetAllSiteMetaTags(string head = "META", string name = "NAME", string content = "CONTENT")
         {
             error = "";
 
@@ -208,7 +209,7 @@ namespace UnitTestProject
                     foreach (var el in Sites)
                     {
                         LoadSite(el);
-                        GetAttributes();
+                        GetAttributes(head, name, content);
                         foreach (var tag in WebAttributes)
                         {
                             if (!FindAttribute(tag))
@@ -227,6 +228,51 @@ namespace UnitTestProject
             {
                 Application.ExitThread();   // Stops the thread
             }
+        }
+
+        protected void VerifySiteTitle(string title)
+        {
+            error = "";
+
+            try
+            {
+                ClearWebBrowser();
+                using (Web = new WebBrowser())
+                {
+                    SetWebBrowserOptions();
+
+                    foreach (var el in Sites)
+                    {
+                        string newaddress = el;
+                        if (!el.StartsWith("http://") &&
+                            !el.StartsWith("https://"))
+                        {
+                            newaddress = "http://" + el;
+                        }
+                        LoadSite("https://www.google.com.ua/interstitial?url=" + 
+                                 newaddress);
+                        
+                        //or Like str OR Containe str
+                        string tmp = GetDocumentTitle();
+                        var t = Web.Document;
+                        if(tmp == title)
+                            error += "\nСайт: " + el;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            finally
+            {
+                Application.ExitThread();   // Stops the thread
+            }
+        }
+
+        protected string GetDocumentTitle()
+        {
+            return Web.DocumentTitle;
         }
     }
 }

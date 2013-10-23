@@ -14,7 +14,7 @@ namespace UnitTestProject
         {            
             try
             {
-                var th = new Thread(obj => GetAllAttributesFromSite());
+                var th = new Thread(obj => GetAllSiteMetaTags("META", "NAME", "CONTENT"));
                 th.SetApartmentState(ApartmentState.STA);
                 th.Start();
                 th.Join();
@@ -26,6 +26,26 @@ namespace UnitTestProject
 
             if (error != "")
                 Assert.Fail("Тэги не найдены на следующих страницах:\n" + error);
+        }
+
+        [STAThread]
+        [Test]
+        public void VerifyIsGoogleBlocked()
+        {
+            try
+            {
+                var th = new Thread(obj => VerifySiteTitle("Предупреждение о вредоносном ПО"));
+                th.SetApartmentState(ApartmentState.STA);
+                th.Start();
+                th.Join();
+            }
+            catch (Exception err)
+            {
+                Assert.Fail("Ошибка: \n", err.Message);
+            }
+
+            if (error != "")
+                Assert.Fail("Google заблокирвоал следующие сайты:\n" + error);
         }
     }
 }
