@@ -12,56 +12,6 @@ namespace UnitTestProject
 {
     public abstract class BaseTest
     {
-        protected string error = "";
-
-        protected List<Tuple<string, string>> Attributes = new List<Tuple<string, string>>();
-
-        protected List<string> Sites = new List<string>()
-            {
-                "http://kpi.ua/",
-                "http://cad.edu.kpi.ua/tsoorin/"
-            };
-
-        protected List<string> WebAttributes = new List<string>()
-            {
-                "abstract",
-                "author",
-                "content-language",
-                "content-style-type",
-                "content-type",
-                "copyright",
-                "description",
-                "designer",
-                "document-state",
-                "expires",
-                "generator",
-                "google",
-                "google-site-verification",
-                "imagetoolbar",
-                "keywords",
-                "language",
-                "msnbot",
-                "mssmarttagspreventparsing",
-                "pics-label",
-                "pragma",
-                "publisher",
-                "rating",
-                "refresh",
-                "reply-to",
-                "resource-type",
-                "revisit",
-                "revisit-after",
-                "robots",
-                "set-cookie",
-                "subject",
-                "title",
-                "url",
-                "vw96.objecttype",
-                "window-target"
-            };
-
-        protected WebBrowser Web = null;
-
         protected enum TypeParameter { Good, Nothing, Error }
 
         //------------------------------------------------
@@ -92,7 +42,7 @@ namespace UnitTestProject
 
         //------------------------------------------------
 
-        protected bool Navigate(String address)
+        protected bool Navigate(WebBrowser Web, String address)
         {
             if (String.IsNullOrEmpty(address)) return false;
             if (address.Equals("about:blank")) return false;
@@ -119,7 +69,8 @@ namespace UnitTestProject
             }
         }
 
-        protected void GetAttributes(string head = "META", string name = "NAME", string content = "CONTENT")
+        protected void GetAttributes(WebBrowser Web, List<Tuple<string, string>> Attributes, 
+            string head = "META", string name = "NAME", string content = "CONTENT")
         {
             Attributes.Clear();
 
@@ -152,29 +103,29 @@ namespace UnitTestProject
             ;
         }*/
 
-        private void SetWebBrowserOptions()
+        private void SetWebBrowserOptions(WebBrowser Web)
         {
             Web.ScriptErrorsSuppressed = true;
             Web.Visible = false;
         }
 
-        protected void ClearWebBrowser()
+        protected void ClearWebBrowser(WebBrowser Web)
         {
             if (Web != null)
                 Web.Dispose();
             Web = null;
         }
 
-        protected void LoadSite(string url)
+        protected void LoadSite(WebBrowser Web, string url)
         {
-            if (Navigate(url) != true)
+            if (Navigate(Web, url) != true)
                 Assert.Fail("Не корректный url.");
 
             while (Web.ReadyState != WebBrowserReadyState.Complete)
                 Application.DoEvents();
         }
 
-        protected bool FindAttribute(string tag)
+        protected bool FindAttribute(List<Tuple<string, string>> Attributes, string tag)
         {
             bool flag = false;
 
@@ -195,24 +146,28 @@ namespace UnitTestProject
             return flag;
         }
 
-        protected void GetAllSiteMetaTags(string head = "META", string name = "NAME", string content = "CONTENT")
+        protected void GetAllSiteMetaTags(ref string error, WebBrowser Web, 
+            List<Tuple<string, string>> Attributes, 
+            string head = "META", string name = "NAME", string content = "CONTENT")
         {
             error = "";
 
             try
             {
-                ClearWebBrowser();
+                ClearWebBrowser(Web);
                 using (Web = new WebBrowser())
                 {
-                    SetWebBrowserOptions();
+                    SetWebBrowserOptions(Web);
 
-                    foreach (var el in Sites)
+                    foreach (var el in SiteItems.Sites)
                     {
-                        LoadSite(el);
-                        GetAttributes(head, name, content);
-                        foreach (var tag in WebAttributes)
+                        LoadSite(Web, el);
+                        GetAttributes(Web, Attributes, head, name, content);
+
+                        AddNewAttributesToList(Attributes);
+                        foreach (var tag in SiteItems.WebAttributes)
                         {
-                            if (!FindAttribute(tag))
+                            if (!FindAttribute(Attributes, tag))
                             {
                                 error += "\nСайт: " + el + "\t Тэг: " + tag;
                             }
@@ -230,18 +185,29 @@ namespace UnitTestProject
             }
         }
 
-        protected void VerifySiteTitle(string title)
+        private void AddNewAttributesToList(List<Tuple<string, string>> Attributes)
+        {
+            foreach (var el in Attributes)
+            {
+                if (!SiteItems.WebAttributes.Contains(el.Item1.ToLower()))
+                {
+                    SiteItems.WebAttributes.Add(el.Item1.ToLower());
+                }
+            }
+        }
+
+        protected void VerifySiteTitle(ref string error, WebBrowser Web, string title)
         {
             error = "";
 
             try
             {
-                ClearWebBrowser();
+                ClearWebBrowser(Web);
                 using (Web = new WebBrowser())
                 {
-                    SetWebBrowserOptions();
+                    SetWebBrowserOptions(Web);
 
-                    foreach (var el in Sites)
+                    foreach (var el in SiteItems.Sites)
                     {
                         string newaddress = el;
                         if (!el.StartsWith("http://") &&
@@ -249,11 +215,11 @@ namespace UnitTestProject
                         {
                             newaddress = "http://" + el;
                         }
-                        LoadSite("https://www.google.com.ua/interstitial?url=" + 
+                        LoadSite(Web, "https://www.google.com.ua/interstitial?url=" + 
                                  newaddress);
                         
                         //or Like str OR Containe str
-                        string tmp = GetDocumentTitle();
+                        string tmp = GetDocumentTitle(Web);
                         var t = Web.Document;
                         if(tmp == title)
                             error += "\nСайт: " + el;
@@ -270,7 +236,7 @@ namespace UnitTestProject
             }
         }
 
-        protected string GetDocumentTitle()
+        protected string GetDocumentTitle(WebBrowser Web)
         {
             return Web.DocumentTitle;
         }
